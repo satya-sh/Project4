@@ -1,128 +1,72 @@
 package com.example.demo;
+
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.ResponseBody;
-import javax.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-
-import java.time.LocalDateTime;
-import java.util.stream.Collectors;
+import javax.servlet.http.HttpSession;
+import java.util.Optional;
 
 /**
- * Controller class for managing game record-related operations.
+ * Controller class for managing GameRecord entities through RESTful endpoints.
  */
 @RestController
-@RequestMapping("/game-records")
 public class GameRecordController {
-    @Autowired
-    private GameRecordRepository gameRecordRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final GameRecordRepository gameRecordRepository;
 
     /**
-     * Retrieves previous game scores of a user with pagination and filtering.
+     * Constructs a new GameRecordController with the specified GameRecordRepository.
      *
-     * @param googleId The Google ID of the user.
-     * @param page     The page number.
-     * @param size     The page size.
-     * @param sort     The sorting criteria.
-     * @param minScore The minimum game score threshold.
-     * @return The list of game records based on the specified criteria.
+     * @param gameRecordRepository The repository for GameRecord entities.
      */
-    @GetMapping("/user/{googleId}/previous-scores")
-    public ResponseEntity<List<GameRecord>> getUserPreviousScores(
-            @PathVariable String googleId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt,desc") String[] sort,
-            @RequestParam(defaultValue = "0") int minScore) {
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sort));
-        List<GameRecord> previousScores = gameRecordRepository.findByUserGoogleId(googleId, pageable);
-
-        // Filter the records based on a minimum score threshold
-        List<GameRecord> filteredScores = previousScores.stream()
-                .filter(record -> record.getGameScore() > minScore)
-                .collect(Collectors.toList());
-
-        return new ResponseEntity<>(filteredScores, HttpStatus.OK);
+    public GameRecordController(GameRecordRepository gameRecordRepository) {
+        this.gameRecordRepository = gameRecordRepository;
     }
 
     /**
-     * Retrieves the top game records with pagination and sorting.
+     * Endpoint for saving a GameRecord entity.
      *
-     * @param page The page number.
-     * @param size The page size.
-     * @param sort The sorting criteria.
-     * @return The list of top game records based on the specified criteria.
+     * @param gameRecord The GameRecord entity to be saved.
+     * @return A message indicating the success or failure of the operation.
      */
-    @GetMapping("/top")
-    public ResponseEntity<List<GameRecord>> getTopGameRecords(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "gameScore,desc") String[] sort) {
-
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sort));
-        List<GameRecord> topGameRecords = gameRecordRepository.findTopByOrderByGameScoreDesc(pageable);
-        return new ResponseEntity<>(topGameRecords, HttpStatus.OK);
-    }
-
-    /**
-     * Retrieves a specific game record by its ID.
-     *
-     * @param gameId The ID of the game record.
-     * @return The game record if found, or 404 if not found.
-     */
-    @GetMapping("/{gameId}")
-    public ResponseEntity<GameRecord> getGameRecordById(@PathVariable Long gameId) {
-        GameRecord gameRecord = gameRecordRepository.findById(gameId).orElse(null);
-        if (gameRecord != null) {
-            return new ResponseEntity<>(gameRecord, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    @PostMapping("/saveGameRecord")
+    @CrossOrigin(origins = "*")
+    public String saveGameRecord(@RequestBody GameRecord gameRecord) {
+        if (gameRecord == null) {
+            return "The game record is invalid";
         }
+        this.gameRecordRepository.save(gameRecord);
+        return "success";
     }
 
     /**
-     * Saves a new game record.
+     * Endpoint for retrieving all GameRecord entities.
      *
-     * @param gameRecord The game record to save.
-     * @return A message indicating the success of the operation.
+     * @return A list of all GameRecord entities stored in the repository.
      */
-    @PostMapping
-    public ResponseEntity<String> saveGameRecord(@RequestBody GameRecord gameRecord) {
-        gameRecord.setCreatedAt(LocalDateTime.now()); // Set the creation timestamp
-        gameRecordRepository.save(gameRecord);
-        return new ResponseEntity<>("Game Record saved successfully", HttpStatus.CREATED);
+    @GetMapping("/findAllGameRecord")
+    @ResponseBody
+    @CrossOrigin(origins = "*")
+    public List<GameRecord> findAllGameRecord() {
+        Iterable<GameRecord> gameRecords = this.gameRecordRepository.findAll();
+        List<GameRecord> gameRecordList = new ArrayList<>();
+        gameRecords.forEach(gameRecordList::add);
+        return gameRecordList;
     }
 
     /**
-     * Deletes a game record by its ID.
+     * Endpoint for retrieving GameRecord entities by user ID.
      *
-     * @param gameId The ID of the game record to delete.
-     * @return A message indicating the success of the operation.
+     * @param userId The user ID to filter GameRecord entities.
+     * @return A list of GameRecord entities with the given user ID.
      */
-    @DeleteMapping("/{gameId}")
-    public ResponseEntity<String> deleteGameRecord(@PathVariable Long gameId) {
-        gameRecordRepository.deleteById(gameId);
-        return new ResponseEntity<>("Game Record deleted successfully", HttpStatus.OK);
+    @GetMapping("/findByUserId")
+    @ResponseBody
+    @CrossOrigin(origins = "*")
+    public List<GameRecord> findByUserId(@RequestParam String userId) {
+        Iterable<GameRecord> gameRecords = this.gameRecordRepository.findByUserId(userId);
+        List<GameRecord> gameRecordList = new ArrayList<>();
+        gameRecords.forEach(gameRecordList::add);
+        return gameRecordList;
     }
-
-    // Add other GameRecordController methods as needed
 }

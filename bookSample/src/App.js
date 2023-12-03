@@ -1,69 +1,216 @@
-// src/App.js
-import React, { useState, useEffect } from 'react';
-import { auth, googleProvider } from './firebase';
-import axios from 'axios';
-import './App.css';
+import React, { useEffect, useState } from "react";
+import "./App.css";
+import axios from "axios";
+
+// Firebase imports
+import { initializeApp } from "firebase/app";
+import { getAuth, signInWithPopup, GoogleAuthProvider } from "firebase/auth";
 
 function App() {
   // State variables
-  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [userId, setUserId] = useState("");
+  const [pageNo, setPageNo] = useState(0);
+  const [records, setRecords] = useState([]);
+  const [userRecords, setUserRecords] = useState([]);
+
+  // Game-related state variables
   const [phrases] = useState([
-    'Change the world from here',
-    'Be the change you wish to see',
-    'Turn your wounds into wisdom',
+    "Change the world from here",
+    "Be the change you wish to see",
+    "Turn your wounds into wisdom",
   ]);
-  const [phrase, setPhrase] = useState('');
-  const [hiddenPhrase, setHiddenPhrase] = useState('');
-  const [previousGuesses, setPreviousGuesses] = useState('');
+  const [phrase, setPhrase] = useState("");
+  const [hiddenPhrase, setHiddenPhrase] = useState("");
+  const [previousGuesses, setPreviousGuesses] = useState("");
   const [maxGuesses] = useState(7);
   const [wrongGuesses, setWrongGuesses] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [solved, setSolved] = useState(false);
-  const [newHandle, setNewHandle] = useState('');
+  const [handle, setHandle] = useState("");
 
-  // Function to generate a hidden version of the phrase
+  // Firebase configuration
+  const firebaseConfig = {
+    apiKey: "AIzaSyDA5fETL0mQ5LspBpywgCqdUFCKbLzrfkk",
+    authDomain: "filtered-search.firebaseapp.com",
+    projectId: "filtered-search",
+    storageBucket: "filtered-search.appspot.com",
+    messagingSenderId: "579002251149",
+    appId: "1:579002251149:web:8d2feccf7ef71957952fc4",
+    measurementId: "G-JCRMNNWZC4"
+  };
+  initializeApp(firebaseConfig);
+
+  // Function to sign in with Google
+  const signInWithGoogle = () => {
+    const provider = new GoogleAuthProvider();
+    const auth = getAuth();
+    signInWithPopup(auth, provider)
+      .then((result) => {
+        console.log(result.user);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+
+  // useEffect to listen for changes in authentication state
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
+        setUserId(user.displayName);
+      } else {
+        console.log("No user is signed in.");
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Function to display all game records
+  function displayAllRecords() {
+    axios
+      .get("https://nth-guide-404519.uw.r.appspot.com/findAllGameRecord")
+      .then((response) => {
+        setRecords(response.data);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+
+  // Function to display all user records
+  function displayAllUserRecords() {
+    axios
+      .get("https://nth-guide-404519.uw.r.appspot.com/findAllUser")
+      .then((response) => {
+        setUserRecords(response.data);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  }
+
+  // Function to generate hidden phrase
   const generateHiddenPhrase = (currentPhrase) => {
     const updatedHiddenPhrase = currentPhrase
-      .split('')
-      .map((char) => (char.match(/[a-zA-Z]/) ? '*' : char))
-      .join('');
+      .split("")
+      .map((char) => (char.match(/[a-zA-Z]/) ? "*" : char))
+      .join("");
     setHiddenPhrase(updatedHiddenPhrase);
   };
 
-  // Function to process a player's guess
+  // Function to process user's guess
   const processGuess = (guess) => {
     if (previousGuesses.includes(guess.toLowerCase())) {
-      // Check if the guess has already been used
-      alert('You have already tried this.');
+      alert("You have already tried this.");
       return;
     }
 
     if (phrase.toLowerCase().includes(guess.toLowerCase())) {
-      const updatedHiddenPhrase = hiddenPhrase
-        .split('')
-        .map((char, index) => (phrase[index].toLowerCase() === guess.toLowerCase() ? phrase[index] : char))
-        .join('');
+      const updatedHiddenPhrase = phrase
+        .split("")
+        .map((char, index) => {
+          if (char.match(/[a-zA-Z]/) && hiddenPhrase[index] === "*") {
+            return phrase[index].toLowerCase() === guess.toLowerCase()
+              ? phrase[index]
+              : "*";
+          }
+          return char;
+        })
+        .join("");
       setHiddenPhrase(updatedHiddenPhrase);
 
       if (updatedHiddenPhrase.toLowerCase() === phrase.toLowerCase()) {
-        setGameOver(true); // The game is won
+        setGameOver(true);
         setSolved(true);
       }
     } else {
       setWrongGuesses(wrongGuesses + 1);
 
       if (wrongGuesses >= maxGuesses - 1) {
-        setGameOver(true); // The game is over
+        setGameOver(true);
       }
     }
 
-    setPreviousGuesses(previousGuesses + guess.toLowerCase() + ',');
+    setPreviousGuesses(previousGuesses + guess.toLowerCase() + ",");
+  };
+
+  // Function to handle name input change
+  const handleNameChange = (event) => {
+    setHandle(event.target.value);
+  };
+
+  // Function to submit name and save game record
+  const handleSubmitName = () => {
+    setPageNo(3);
+    displayAllRecords();
+    displayAllUserRecords();
+
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    // Save user data
+    axios
+      .post("https://nth-guide-404519.uw.r.appspot.com/saveUser", {
+        userId: user.displayName,
+        handle: handle,
+        email: user.email,
+        date: new Date().toISOString().slice(0, 10),
+      })
+      .then((response) => {
+        console.log(response.data);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+
+    // Save game record
+    axios
+      .post("https://nth-guide-404519.uw.r.appspot.com/saveGameRecord", {
+        userId: user.displayName,
+        score: maxGuesses - wrongGuesses,
+        date: new Date().toISOString().slice(0, 10),
+      })
+      .then((response) => {
+        console.log(response.data);
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  };
+
+  // Function to display user's game records
+  const displayMyGames = () => {
+    axios
+      .get(`https://nth-guide-404519.uw.r.appspot.com/findByUserId?userId=${userId}`)
+      .then((response) => {
+        setRecords(response.data);
+        setPageNo(4);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
+  };
+
+  // Function to display leaderboard
+  const displayLeaderboard = () => {
+    axios
+      .get("https://nth-guide-404519.uw.r.appspot.com/findAllGameRecord")
+      .then((response) => {
+        setRecords(response.data);
+        setPageNo(5);
+      })
+      .catch((error) => {
+        console.log(error);
+      });
   };
 
   // Function to start a new game
   const newGame = () => {
-    setHiddenPhrase('');
-    setPreviousGuesses('');
+    setHiddenPhrase("");
+    setPreviousGuesses("");
     setWrongGuesses(0);
     setGameOver(false);
     setSolved(false);
@@ -73,142 +220,29 @@ function App() {
     generateHiddenPhrase(phrases[randomIndex]);
   };
 
-  // Component did mount
+  // useEffect to start a new game when phrases change
   useEffect(() => {
-    newGame(); // Initialize the game with a random phrase
+    newGame();
   }, [phrases]);
 
-  // Function to handle Google sign-in
-  const signInWithGoogle = async () => {
-    try {
-      const result = await auth.signInWithPopup(googleProvider);
-      const { uid, displayName } = result.user;
-
-      // Check if the user already exists in the database
-      const existsResponse = await axios.get(`https://nth-guide-404519.uw.r.appspot.com/exists/${uid}`);
-
-      if (!existsResponse.data) {
-        // If the user doesn't exist, add them to the database
-        await axios.post('https://nth-guide-404519.uw.r.appspot.com/users', {
-          googleId: uid,
-          userHandle: displayName,
-        });
-      }
-
-      setUser(result.user);
-    } catch (error) {
-      console.error('Google sign-in error:', error);
-    }
-  };
-
-  useEffect(() => {
-    // Listen for changes in authentication state
-    const unsubscribe = auth.onAuthStateChanged((authUser) => {
-      setUser(authUser);
-    });
-
-    // Clean up the listener on component unmount
-    return () => {
-      unsubscribe();
-    };
-  }, []);
-
-  // Function to calculate the game score (replace this with your logic)
-  const calculateGameScore = () => {
-    // Replace this with your game score calculation logic
-    return 0;
-  };
-
-  // Function to save the game
-  const saveGame = async () => {
-    if (user) {
-      try {
-        // Prepare the game record data
-        const gameRecord = {
-          userHandle: user.displayName,
-          googleId: user.uid,
-          gameScore: calculateGameScore(),
-          createdAt: new Date().toISOString(),
-        };
-
-        // Make a POST request to save the game
-        await axios.post('https://nth-guide-404519.uw.r.appspot.com/game-records', gameRecord);
-
-        // Optionally, you can show a success message or update the UI
-        console.log('Game saved successfully!');
-      } catch (error) {
-        console.error('Error saving the game:', error);
-        // Handle errors appropriately
-      }
-    }
-  };
-
-  // Function to fetch user games
-  const fetchUserGames = async () => {
-    if (user) {
-      try {
-        const response = await axios.get(`https://nth-guide-404519.uw.r.appspot.com/game-records/user/${user.uid}/previous-scores`);
-
-        const userGames = response.data;
-        console.log('User Games:', userGames);
-        // Update the UI to display user games (you can use state or a modal)
-      } catch (error) {
-        console.error('Error fetching user games:', error);
-        // Handle errors appropriately
-      }
-    }
-  };
-
-  // Function to fetch the leaderboard
-  const fetchLeaderboard = async () => {
-    try {
-      const response = await axios.get('https://nth-guide-404519.uw.r.appspot.com/game-records/top');
-
-      const leaderboard = response.data;
-      console.log('Leaderboard:', leaderboard);
-      // Update the UI to display the leaderboard (you can use state or a modal)
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-      // Handle errors appropriately
-    }
-  };
-
-  // Function to update the user handle
-  const updateHandle = async () => {
-    if (user && newHandle.trim() !== '') {
-      try {
-        // Make a PATCH request to update the user handle
-        await axios.patch(`https://nth-guide-404519.uw.r.appspot.com/users/${user.uid}/update-handle`, newHandle);
-
-        // Optionally, you can show a success message or update the UI
-        console.log('User handle updated successfully!');
-      } catch (error) {
-        console.error('Error updating user handle:', error);
-        // Handle errors appropriately
-      }
-    }
-  };
-
-  // Function to sign out
-  const signOut = () => {
-    auth.signOut();
-    setUser(null); // Initialize the variables
-  };
-
+  // JSX rendering
   return (
-    <div className="App">
-      {!user ? (
-        <div>
-          <h1>Welcome to Wheel of Fortune</h1>
-          <button onClick={signInWithGoogle}>Sign in with Google</button>
-        </div>
-      ) : (
-        <div>
+    <>
+      {!userId && (
+        <button type="button" onClick={signInWithGoogle}>
+          Sign in with Google
+        </button>
+      )}
+      {userId && (
+        <div className="App">
           {!gameOver ? (
+            // Game in progress
             <div>
               <h1>Wheel of Fortune</h1>
               <div className="phrase">{hiddenPhrase}</div>
-              <div className="previous-guesses">Previous Guesses: {previousGuesses}</div>
+              <div className="previous-guesses">
+                Previous Guesses: {previousGuesses}
+              </div>
               <input
                 type="text"
                 maxLength="1"
@@ -216,41 +250,90 @@ function App() {
                   const guess = e.target.value;
                   if (guess.match(/[a-zA-Z]/) && guess.length === 1) {
                     processGuess(guess);
-                    e.target.value = '';
+                    e.target.value = "";
                   } else {
-                    alert('Please enter Alphabet only');
-                    e.target.value = '';
+                    alert("Please enter Alphabet only");
+                    e.target.value = "";
                   }
                 }}
               />
-              <div className="wrong-guesses">Wrong Guesses: {wrongGuesses}</div>
+              <div className="wrong-guesses">
+                Wrong Guesses: {wrongGuesses}
+              </div>
             </div>
           ) : (
+            // Game over
             <div className="end-game-message">
-              {solved ? (
+              {solved && pageNo === 0 && (
                 <div className="win-message">YOU WON!!</div>
-              ) : (
+              )}
+              {!solved && pageNo === 0 && (
                 <div className="lose-message">Game Over!</div>
               )}
-              <button onClick={newGame}>New Game</button>
-              <button onClick={saveGame}>Save Game</button>
-              <button onClick={fetchUserGames}>My Games</button>
-              <button onClick={fetchLeaderboard}>Leaderboard</button>
-              <div>
-                <input
-                  type="text"
-                  value={newHandle}
-                  onChange={(e) => setNewHandle(e.target.value)}
-                  placeholder="Enter new handle"
-                />
-                <button onClick={updateHandle}>Change Handle</button>
-              </div>
-              <button onClick={signOut}>Sign Out</button>
+              {pageNo === 0 && (
+                // Prompt to save game record
+                <div>
+                  <p>Do you want to save your game record?</p>
+                  <button type="button" onClick={() => setPageNo(2)}>
+                    Yes
+                  </button>
+                  <button type="button" onClick={() => setPageNo(1)}>
+                    No
+                  </button>
+                </div>
+              )}
+              {pageNo === 1 && <button onClick={newGame}>New Game</button>}
+
+              {pageNo === 2 && (
+                // Form to enter name and save record
+                <div>
+                  <label htmlFor="nameInput">Enter your name:</label>
+                  <input
+                    type="text"
+                    id="nameInput"
+                    value={handle}
+                    onChange={handleNameChange}
+                  />
+                  <button type="button" onClick={handleSubmitName}>
+                    Submit Name
+                  </button>
+                </div>
+              )}
+
+              {pageNo === 3 && (
+                // Options to display user's games or leaderboard
+                <div>
+                  <button onClick={displayMyGames}>Display My Games</button>
+                  <button onClick={displayLeaderboard}>Display Leaderboard</button>
+                </div>
+              )}
+
+              {pageNo === 4 &&
+                // Displaying user's game records
+                userRecords.map((record) => (
+                  <div className="record-item" key={record.id}>
+                    <h3>{record.id}</h3>
+                    <p>by {record.score}</p>
+                    <p> {record.date}</p>
+                    <p> {record.userId}</p>
+                  </div>
+                ))}
+
+              {pageNo === 5 &&
+                // Displaying leaderboard
+                records.map((record) => (
+                  <div className="record-item" key={record.id}>
+                    <h3>{record.id}</h3>
+                    <p>by {record.score}</p>
+                    <p> {record.date}</p>
+                    <p> {record.userId}</p>
+                  </div>
+                ))}
             </div>
           )}
         </div>
       )}
-    </div>
+    </>
   );
 }
 

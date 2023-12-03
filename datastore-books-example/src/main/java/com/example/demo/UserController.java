@@ -3,6 +3,7 @@ package com.example.demo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -12,84 +13,52 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.ResponseBody;
 import javax.servlet.http.HttpSession;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 
 /**
- * Controller class for managing user-related operations.
+ * Controller class for managing User entities through RESTful endpoints.
  */
 @RestController
-@RequestMapping("/users")
 public class UserController {
-    @Autowired
-    private UserRepository userRepository;
+
+    private final UserRepository userRepository;
 
     /**
-     * Retrieves a user by their Google ID.
+     * Constructs a new UserController with the specified UserRepository.
      *
-     * @param googleId The Google ID of the user.
-     * @return The user information if found, or 404 if not found.
+     * @param userRepository The repository for User entities.
      */
-    @GetMapping("/{googleId}")
-    public ResponseEntity<User> getUserById(@PathVariable String googleId) {
-        User user = userRepository.findById(googleId).orElse(null);
-        if (user != null) {
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public UserController(UserRepository userRepository) {
+        this.userRepository = userRepository;
+    }
+
+    /**
+     * Endpoint for saving a User entity.
+     *
+     * @param user The User entity to be saved.
+     * @return A message indicating the success or failure of the operation.
+     */
+    @PostMapping("/saveUser")
+    @CrossOrigin(origins = "*")
+    public String saveUser(@RequestBody User user) {
+        if (user == null) {
+            return "The user is invalid";
         }
+        this.userRepository.save(user);
+        return "success";
     }
 
     /**
-     * Checks if a user exists in the user table by their Google ID.
+     * Endpoint for retrieving all User entities.
      *
-     * @param googleId The Google ID of the user.
-     * @return A message indicating whether the user exists or not.
+     * @return A list of all User entities stored in the repository.
      */
-    @GetMapping("/exists/{googleId}")
-    public ResponseEntity<String> checkUserExists(@PathVariable String googleId) {
-        if (userRepository.existsById(googleId)) {
-            return new ResponseEntity<>("User exists in the user table", HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>("User does not exist in the user table", HttpStatus.NOT_FOUND);
-        }
+    @GetMapping("/findAllUser")
+    @ResponseBody
+    @CrossOrigin(origins = "*")
+    public List<User> findAllUser() {
+        Iterable<User> user = this.userRepository.findAll();
+        List<User> userList = new ArrayList<>();
+        user.forEach(userList::add);
+        return userList;
     }
-
-    /**
-     * Updates the user handle (name) for a given user.
-     *
-     * @param googleId   The Google ID of the user.
-     * @param newHandle  The new user handle to set.
-     * @return The updated user information if successful, or 404 if the user is not found.
-     */
-    @PatchMapping("/{googleId}/update-handle")
-    public ResponseEntity<User> updateHandle(
-            @PathVariable String googleId,
-            @RequestBody String newHandle) {
-
-        User user = userRepository.findById(googleId).orElse(null);
-        if (user != null) {
-            user.setUserHandle(newHandle);
-            userRepository.save(user);
-            return new ResponseEntity<>(user, HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-    }
-
-    /**
-     * Deletes a user by their Google ID.
-     *
-     * @param googleId The Google ID of the user to delete.
-     * @return A message indicating the success of the operation.
-     */
-    @DeleteMapping("/{googleId}")
-    public ResponseEntity<String> deleteUser(@PathVariable String googleId) {
-        userRepository.deleteById(googleId);
-        return new ResponseEntity<>("User deleted successfully", HttpStatus.OK);
-    }
-
-    // Add other UserController methods as needed
 }

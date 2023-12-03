@@ -1,105 +1,131 @@
 package com.example.demo;
 
-import org.springframework.data.annotation.Id;
 import com.google.cloud.spring.data.datastore.core.mapping.Entity;
-import java.time.LocalDateTime;
+import org.springframework.data.annotation.Id;
 
 /**
- * Entity representing a game record in the application.
+ * Represents a game record entity with information such as user ID, score, and date.
  */
-@Entity(name = "game_records")
+@Entity(name = "games")
 public class GameRecord {
+    /**
+     * Unique identifier for the game record.
+     */
     @Id
-    private Long gameId;
-
-    private User user;
-
-    private int gameScore;
-
-    private LocalDateTime createdAt;
-
-    public GameRecord() {
-        // Empty constructor needed for Datastore
-    }
-
-    // Constructor with parameters
-    public GameRecord(Long gameId, User user, int gameScore, LocalDateTime createdAt) {
-        this.gameId = gameId;
-        this.user = user;
-        this.gameScore = gameScore;
-        this.createdAt = createdAt;
-    }
-    // Getters and Setters
+    Long id;
 
     /**
-     * Gets the game ID.
-     *
-     * @return The game ID.
+     * Score achieved in the game.
      */
-    public Long getGameId() {
-        return gameId;
-    }
+    int score;
 
     /**
-     * Sets the game ID.
-     *
-     * @param gameId The game ID to set.
+     * Date of the game record.
      */
-    public void setGameId(Long gameId) {
-        this.gameId = gameId;
+    String date;
+
+    /**
+     * User ID associated with the game record.
+     */
+    String userId;
+
+    /**
+     * Constructs a new GameRecord with the specified parameters.
+     *
+     * @param userId The user ID associated with the game record.
+     * @param score  The score achieved in the game.
+     * @param date   The date of the game record.
+     */
+    public GameRecord(String userId, int score, String date) {
+        this.userId = userId;
+        this.score = score;
+        this.date = date;
     }
 
     /**
-     * Gets the associated user.
+     * Gets the unique identifier for the game record.
      *
-     * @return The associated user.
+     * @return The game record's unique identifier.
      */
-    public User getUser() {
-        return user;
+    public long getId() {
+        return this.id;
     }
 
     /**
-     * Sets the associated user.
+     * Sets the unique identifier for the game record.
      *
-     * @param user The user to set.
+     * @param id The new unique identifier for the game record.
      */
-    public void setUser(User user) {
-        this.user = user;
+    public void setId(Long id) {
+        this.id = id;
     }
 
     /**
-     * Gets the game score.
+     * Gets the user ID associated with the game record.
      *
-     * @return The game score.
+     * @return The user ID.
      */
-    public int getGameScore() {
-        return gameScore;
+    public String getUserId() {
+        return userId;
     }
 
     /**
-     * Sets the game score.
+     * Sets the user ID for the game record.
      *
-     * @param gameScore The game score to set.
+     * @param userId The new user ID.
      */
-    public void setGameScore(int gameScore) {
-        this.gameScore = gameScore;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     /**
-     * Gets the creation timestamp.
+     * Gets the score achieved in the game.
      *
-     * @return The creation timestamp.
+     * @return The score.
      */
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
+    public int getScore() {
+        return score;
     }
 
     /**
-     * Sets the creation timestamp.
+     * Sets the score for the game record.
      *
-     * @param createdAt The creation timestamp to set.
+     * @param score The new score.
      */
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public void setScore(int score) {
+        this.score = score;
+    }
+
+    /**
+     * Gets the date of the game record.
+     *
+     * @return The date.
+     */
+    public String getDate() {
+        return date;
+    }
+
+    /**
+     * Sets the date for the game record.
+     *
+     * @param date The new date.
+     */
+    public void setDate(String date) {
+        this.date = date;
+    }
+
+    /**
+     * Returns a string representation of the GameRecord object.
+     *
+     * @return A string representation of the GameRecord.
+     */
+    @Override
+    public String toString() {
+        return "GameRecord{" +
+                "id=" + id +
+                ", score=" + score +
+                ", date='" + date + '\'' +
+                ", userId='" + userId + '\'' +
+                '}';
     }
 }
